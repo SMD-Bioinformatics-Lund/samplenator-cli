@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "samplenator-cli"
+dynamic = ["version"]
+description = "Ingest CLI for theSamplenator — push sample status records from CSV/TSV/YAML"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "click>=8.0",
+    "pymongo>=4.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+samplenator-cli = "samplenator_cli.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "samplenator_cli.__version__.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["samplenator_cli*"]
