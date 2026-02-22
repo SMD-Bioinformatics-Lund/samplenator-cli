@@ -1,62 +1,74 @@
 # ---------------------------------------------------------------------------
-# Entities
+# Systems
 # ---------------------------------------------------------------------------
 # These are the lab systems / software tools that push sample status records
-# into theSamplenator via the ingest endpoint.  The `entity` field in every
+# into theSamplenator via the ingest endpoint.  The `system` field in every
 # ingest record should be one of these names (or a recognised alias below).
 #
 # Workflow order mirrors the lab processing pipeline:
-#   Clarity  →  Bjorn  →  Pipeline  →  Middleman  (→  BLISKO, future)
+#   clarity  →  demux  →  bjorn  →  pipeline  →  cdm  →  frontend
 # ---------------------------------------------------------------------------
 
-KNOWN_ENTITIES = [
-    # ---- Clarity ------------------------------------------------------------
+KNOWN_SYSTEMS = [
+    # ---- clarity ------------------------------------------------------------
     # Sample registration and LIMS tracking (Clarity LIMSv6).
     # Pushes when a sample is registered, lab processing starts, or the
     # sample is sent to sequencing.
     # Only sequencing samples are ingested — ddPCR and similar are excluded.
-    "Clarity",
+    "clarity",
 
-    # ---- Bjorn --------------------------------------------------------------
-    # Sequencing output and demultiplexing.
-    # Pushes when demux has started and when data is available in Bjorn.
-    # Requires: sample_id + assay + clarity_id or sequencing_run_id.
-    "Bjorn",
+    # ---- demux --------------------------------------------------------------
+    # Demultiplexing step.
+    # Pushes when demultiplexing has started and when it completes.
+    "demux",
 
-    # ---- Pipeline -----------------------------------------------------------
+    # ---- bjorn --------------------------------------------------------------
+    # Sequencing output tracking.
+    # Pushes when data is available in Bjorn.
+    # Requires: sample_id + assay + clarity_lims_id or sequencing_run_id.
+    "bjorn",
+
+    # ---- pipeline -----------------------------------------------------------
     # Bioinformatics analysis pipeline (Nextflow / Snakemake).
     # Pushes when the pipeline starts and when it finishes.
     # Time-in-queue is calculated by the UI — not pushed.
-    "Pipeline",
+    "pipeline",
 
-    # ---- Middleman ----------------------------------------------------------
-    # CDM step and loading into downstream analysis interfaces.
-    # Pushes when CDM is done and when a sample is loaded into
-    # Scout, Coyote, Bonsai, or Breaxpress (depending on assay).
-    "Middleman",
+    # ---- cdm ----------------------------------------------------------------
+    # CDM processing step.
+    # Pushes when CDM processing is done for the sample.
+    "cdm",
 
-    # ---- BLISKO (future / bonus) -------------------------------------------
-    # RS-LIMS integration. When a sample appears in BLISKO it may be
-    # propagated here. Integration pending investigation.
-    "BLISKO",
+    # ---- frontend -----------------------------------------------------------
+    # Loading into downstream analysis interfaces.
+    # Pushes when a sample is loaded into Scout, Coyote, Bonsai, or Breaxpress
+    # (depending on assay).
+    "frontend",
 ]
+
+# Systems whose sub-section uses a checkpoints map rather than flat fields
+CHECKPOINT_SYSTEMS = {"clarity", "frontend"}
 
 # ---------------------------------------------------------------------------
 # Field aliases
 # ---------------------------------------------------------------------------
 # Canonical field → list of accepted aliases (case-insensitive).
-# Override at runtime with:  samplenator-ingest file.csv --config my_config.py
+# Override at runtime with:  samplenator-cli upload file.csv --config my_config.py
 # ---------------------------------------------------------------------------
 
 FIELD_ALIASES = {
-    "sample_id":          ["lab_id", "sampleid", "sample", "sample-id"],
-    "entity":             ["system", "software", "tool", "source"],
+    "sample_id":          ["sampleid", "sample", "sample-id"],
+    "system":             ["entity", "software", "tool", "source"],
     "message":            ["msg", "description", "notes", "note"],
     "status":             ["state", "result", "outcome"],
     "clarity_lims_id":    ["clarity", "clar_id", "clarityid"],
     "sequencing_run_id":  ["run_id", "seq_run", "sequencing_run", "runid"],
     "assay":              ["assay_type", "test", "panel"],
     "group_id":           ["group", "batch", "batch_id", "batchid"],
+    "lab_id":             [],
+    "sample_type":        ["type"],
+    "checkpoint":         ["step", "phase"],
+    "url":                [],
 }
 
 # ---------------------------------------------------------------------------
@@ -64,11 +76,25 @@ FIELD_ALIASES = {
 # ---------------------------------------------------------------------------
 
 KNOWN_FIELDS = {
-    "sample_id", "entity", "message", "status",
+    "sample_id", "system", "message", "status",
     "clarity_lims_id", "sequencing_run_id", "assay", "group_id",
+    "lab_id", "sample_type", "checkpoint", "url",
 }
-REQUIRED_FIELDS = {"sample_id", "entity", "message", "status"}
-VALID_STATUSES = {"ok", "fail"}
+REQUIRED_FIELDS = {"sample_id", "system", "message", "status"}
+VALID_STATUSES  = {"started", "running", "ok", "completed", "fail", "failed"}
+
+# ---------------------------------------------------------------------------
+# Status map — flat status → MongoDB compound string
+# ---------------------------------------------------------------------------
+
+STATUS_MAP = {
+    "started":   "started:true;completed:false",
+    "running":   "started:true;completed:false",
+    "ok":        "started:true;completed:true",
+    "completed": "started:true;completed:true",
+    "fail":      "started:true;completed:false",
+    "failed":    "started:true;completed:false",
+}
 
 # ---------------------------------------------------------------------------
 # MongoDB config
