@@ -68,7 +68,6 @@ FIELD_ALIASES = {
     "lab_id":             [],
     "sample_type":        ["type"],
     "checkpoint":         ["step", "phase"],
-    "url":                [],
 }
 
 # ---------------------------------------------------------------------------
@@ -78,10 +77,33 @@ FIELD_ALIASES = {
 KNOWN_FIELDS = {
     "sample_id", "system", "message", "status",
     "clarity_lims_id", "sequencing_run_id", "assay", "group_id",
-    "lab_id", "sample_type", "checkpoint", "url",
+    "lab_id", "sample_type", "checkpoint",
 }
 REQUIRED_FIELDS = {"sample_id", "system", "message", "status"}
 VALID_STATUSES  = {"started", "running", "ok", "completed", "fail", "failed"}
+
+# ---------------------------------------------------------------------------
+# URL masks — {sample_id} is interpolated at ingest time.
+# For checkpoint systems, nest by checkpoint name.
+# Omit an entry if the system / checkpoint has no canonical URL.
+# ---------------------------------------------------------------------------
+
+SYSTEM_URL_MASKS = {
+    # Non-checkpoint systems
+    "bjorn":    "https://bjorn.example.com/samples/{sample_id}",
+    "pipeline": "https://pipeline.example.com/runs/{sample_id}",
+    "cdm":      "https://cdm.example.com/samples/{sample_id}",
+
+    # frontend checkpoints
+    "frontend": {
+        "scout":      "https://scout.example.com/cases/{sample_id}",
+        "coyote":     "https://coyote.example.com/samples/{sample_id}",
+        "bonsai":     "https://bonsai.example.com/sample/{sample_id}",
+        "breaxpress": "https://breaxpress.example.com/sample/{sample_id}",
+        "clarity":    "https://clarity.example.com/samples/{sample_id}",
+        "eyrie":      "https://eyrie.example.com/samples/{sample_id}",
+    },
+}
 
 # ---------------------------------------------------------------------------
 # Status map — flat status → MongoDB compound string
