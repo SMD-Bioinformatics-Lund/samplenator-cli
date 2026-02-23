@@ -7,4 +7,4 @@ COPY samplenator_cli/ samplenator_cli/
 
 RUN pip install --no-cache-dir .
 
-ENTRYPOINT ["samplenator-ingest"]
+ENTRYPOINT ["samplenator-cli"]

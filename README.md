@@ -1,13 +1,13 @@
-# theSamplenatorCLI
+# samplenator-cli
 
-Ingest CLI for theSamplenator. Reads sample status records from CSV, TSV, or YAML files and writes them directly to MongoDB.
+Ingest CLI for theSamplenator. Reads sample status records from CSV, TSV, or YAML files and writes them directly to MongoDB using upsert — multiple records for the same `sample_id` merge into one document, with each system writing only to its own sub-section (`systems.<name>`).
 
 ---
 
 ## Install
 
 ```bash
-pip install -e tools/theSamplenatorCLI
+pip install -e tools/samplenator-cli
 ```
 
 Or from within this directory:
@@ -30,7 +30,7 @@ samplenator-cli upload -i <file> [--mongo-uri URI] [--mongo-db DB] [--mongo-coll
 | `--mongo-uri` | MongoDB URI (env: `SAMPLENATOR_MONGO_URI`, default: `mongodb://localhost:27017`) |
 | `--mongo-db` | MongoDB database name (env: `SAMPLENATOR_MONGO_DB`, default: `bjorn`) |
 | `--mongo-collection` | MongoDB collection name (env: `SAMPLENATOR_MONGO_COLLECTION`, default: `sample_tracking`) |
-| `--dry-run` | Parse and validate only — prints JSON, does not insert |
+| `--dry-run` | Parse and validate only — prints JSON update documents, does not write to MongoDB |
 | `--config` | Path to an alternate `config.py` for custom field aliases |
 
 ### Env var resolution order (per argument)
@@ -45,7 +45,7 @@ samplenator-cli upload -i <file> [--mongo-uri URI] [--mongo-db DB] [--mongo-coll
 # Dry run to verify field mapping before inserting
 samplenator-cli upload -i export.csv --dry-run
 
-# Insert a YAML batch to the default local MongoDB
+# Upsert a YAML batch to the default local MongoDB
 samplenator-cli upload -i batch.yaml
 
 # Insert to a specific database/collection
@@ -65,8 +65,8 @@ samplenator-cli upload -i lims_export.csv --config /path/to/my_config.py
 **CSV** (`.csv`):
 
 ```csv
-lab_id,system,msg,state,clarityid,run_id,panel,batch_id
-SAMPLE-001,Bjorn,Demux complete,ok,CLAR-1001,RUN-2026-001,WGS,LB-2026-0301
+sample_id,system,msg,state,clarityid,run_id,panel,batch_id
+SAMPLE-001,bjorn,Demux complete,ok,CLAR-1001,RUN-2026-001,WGS,LB-2026-0301
 ```
 
 **TSV** (`.tsv`) — same columns, tab-delimited.
@@ -75,13 +75,24 @@ SAMPLE-001,Bjorn,Demux complete,ok,CLAR-1001,RUN-2026-001,WGS,LB-2026-0301
 
 ```yaml
 - sample_id: SAMPLE-001
-  entity: Bjorn
+  system: bjorn
   message: Demux complete
   status: ok
   clarity_lims_id: CLAR-1001
   sequencing_run_id: RUN-2026-001
   assay: WGS
   group_id: LB-2026-0301
+```
+
+With a checkpoint system (clarity or frontend):
+
+```yaml
+- sample_id: SAMPLE-001
+  system: frontend
+  message: Loaded into Scout
+  status: ok
+  checkpoint: scout
+  url: https://scout.example.com/cases/SAMPLE-001
 ```
 
 ---
@@ -91,13 +102,17 @@ SAMPLE-001,Bjorn,Demux complete,ok,CLAR-1001,RUN-2026-001,WGS,LB-2026-0301
 | Field | Required | Valid values | Notes |
 |---|---|---|---|
 | `sample_id` | yes | any string | Primary identifier |
-| `entity` | yes | see [Entities](#entities) | Reporting system |
+| `system` | yes | see [Systems](#systems) | Reporting system (lowercase) |
 | `message` | yes | any string | Human-readable status note |
-| `status` | yes | `ok`, `fail` | Normalised to lowercase |
+| `status` | yes | `started`, `running`, `ok`, `completed`, `fail`, `failed` | Normalised to lowercase |
 | `clarity_lims_id` | no | any string | Clarity LIMS ID |
 | `sequencing_run_id` | no | any string | Sequencing run ID |
 | `assay` | no | any string | Assay / panel name |
 | `group_id` | no | any string | Batch or lab batch ID |
+| `lab_id` | no | any string | Lab identifier (separate from sample_id) |
+| `sample_type` | no | any string | Sample type |
+| `checkpoint` | no | any string | Step or phase (required for granular clarity/frontend tracking) |
+| `url` | no | any string | URL to the sample in an analysis interface |
 
 ### Field alias mapping
 
@@ -105,24 +120,26 @@ Non-standard column names are automatically mapped to canonical field names (def
 
 | Canonical field | Accepted aliases |
 |---|---|
-| `sample_id` | `lab_id`, `sampleid`, `sample`, `sample-id` |
-| `entity` | `system`, `software`, `tool`, `source` |
+| `sample_id` | `sampleid`, `sample`, `sample-id` |
+| `system` | `entity`, `software`, `tool`, `source` |
 | `message` | `msg`, `description`, `notes`, `note` |
 | `status` | `state`, `result`, `outcome` |
 | `clarity_lims_id` | `clarity`, `clar_id`, `clarityid` |
 | `sequencing_run_id` | `run_id`, `seq_run`, `sequencing_run`, `runid` |
 | `assay` | `assay_type`, `test`, `panel` |
 | `group_id` | `group`, `batch`, `batch_id`, `batchid` |
+| `sample_type` | `type` |
+| `checkpoint` | `step`, `phase` |
 
 Provide `--config path/to/config.py` to use your own mappings. Use `samplenator_cli/config.py` as a template.
 
 ---
 
-## Entities
+## Systems
 
-These are the lab systems that push sample status updates into theSamplenator. The `entity` field in every ingest record must identify which system is reporting.
+These are the lab systems that push sample status updates into theSamplenator. The `system` field in every ingest record must identify which system is reporting (lowercase).
 
-### Clarity
+### clarity
 
 **Role:** Sample registration and LIMS tracking (Clarity LIMSv6).
 
@@ -133,25 +150,37 @@ Pushes status when:
 
 > Only sequencing samples are ingested. ddPCR and similar assay types are excluded.
 
+Uses **checkpoints** — supply `checkpoint` (e.g. `registered`, `lab_processing`, `sent_to_sequencing`) for granular tracking. Defaults to `default` if omitted.
+
 **Typical messages:** `"Registered in Clarity"`, `"Lab processing started"`, `"Sent to sequencing"`
 
 ---
 
-### Bjorn
+### demux
 
-**Role:** Sequencing output and demultiplexing.
+**Role:** Demultiplexing step.
 
 Pushes status when:
 - Demultiplexing has started
-- Demultiplexing is complete and data is available
-
-**Required fields:** `sample_id`, `assay`, and at least one of `clarity_lims_id` / `sequencing_run_id`.
+- Demultiplexing is complete
 
 **Typical messages:** `"Demux started"`, `"Demux complete"`
 
 ---
 
-### Pipeline
+### bjorn
+
+**Role:** Sequencing output tracking.
+
+Pushes status when data is available in Bjorn.
+
+**Required fields:** `sample_id`, `assay`, and at least one of `clarity_lims_id` / `sequencing_run_id`.
+
+**Typical messages:** `"Data available in Bjorn"`
+
+---
+
+### pipeline
 
 **Role:** Bioinformatics analysis pipeline (Nextflow / Snakemake).
 
@@ -165,25 +194,38 @@ Pushes status when:
 
 ---
 
-### Middleman
+### cdm
 
-**Role:** CDM step and loading into downstream analysis interfaces.
+**Role:** CDM processing step.
 
-Pushes status when:
-- CDM processing is done for the sample
-- The sample has been loaded into an analysis interface
+Pushes status when CDM processing is done for the sample.
 
-Analysis interfaces: **Scout**, **Coyote**, **Bonsai**, or **Breaxpress** — depending on assay.
-
-**Typical messages:** `"Loaded into Scout"`, `"CDM complete"`
+**Typical messages:** `"CDM complete"`
 
 ---
 
-### BLISKO *(future / bonus)*
+### frontend
 
-**Role:** RS-LIMS integration.
+**Role:** Loading into downstream analysis interfaces.
 
-When a sample appears in BLISKO it may be propagated to theSamplenator. Integration is pending investigation by the team.
+Pushes status when a sample is loaded into an analysis interface.
+
+Uses **checkpoints** — supply `checkpoint` with the interface name (e.g. `scout`, `coyote`, `bonsai`, `breaxpress`). Defaults to `default` if omitted.
+
+Analysis interfaces: **Scout**, **Coyote**, **Bonsai**, or **Breaxpress** — depending on assay.
+
+**Typical messages:** `"Loaded into Scout"`, `"Loaded into Coyote"`
+
+---
+
+## MongoDB behaviour
+
+Each record is written as a single `update_one(..., upsert=True)` call keyed on `sample_id`:
+
+- **New sample:** a document is created with `timestamps.created_at` set once.
+- **Existing sample:** only the fields for the reporting system (`systems.<name>`) are updated — other systems' data is untouched.
+- **Timeline:** every ingest appends an entry to the `timeline` array, preserving full history.
+- **Checkpoint systems** (`clarity`, `frontend`): data is nested under `systems.<name>.checkpoints.<checkpoint>`, allowing multiple checkpoints per system per sample.
 
 ---
 
@@ -220,6 +262,6 @@ samplenator-cli/
     ├── __init__.py
     ├── __version__.py
     ├── cli.py                 # CLI entry point (subcommands: upload)
-    ├── config.py              # KNOWN_ENTITIES, FIELD_ALIASES, MONGO_URI/DB/COLLECTION
-    └── ingest.py              # parse_file, resolve_aliases, validate_record, build_payload
+    ├── config.py              # KNOWN_SYSTEMS, FIELD_ALIASES, MONGO_URI/DB/COLLECTION
+    └── ingest.py              # parse_file, resolve_aliases, validate_record, build_mongo_update
 ```

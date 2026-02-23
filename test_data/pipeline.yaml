@@ -1,0 +1,13 @@
+- sample_id: TEST-SAMPLE-001
+  system: pipeline
+  message: "Pipeline started"
+  status: started
+  assay: WGS
+  group_id: BATCH-TEST-001
+
+- sample_id: TEST-SAMPLE-001
+  system: pipeline
+  message: "Pipeline completed"
+  status: completed
+  assay: WGS
+  group_id: BATCH-TEST-001

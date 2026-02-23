@@ -1,0 +1,52 @@
+# Full journey for TEST-SAMPLE-001 — one representative record per system in pipeline order.
+# Upload this as a single batch to exercise upsert merging across all six systems.
+
+- sample_id: TEST-SAMPLE-001
+  system: clarity
+  message: "Registered in Clarity"
+  status: started
+  checkpoint: registered
+  clarity_lims_id: CLAR-TEST-001
+  lab_id: LAB-001
+  assay: WGS
+  group_id: BATCH-TEST-001
+  sample_type: blood
+
+- sample_id: TEST-SAMPLE-001
+  system: demux
+  message: "Demultiplexing complete"
+  status: completed
+  sequencing_run_id: RUN-TEST-2026-001
+
+- sample_id: TEST-SAMPLE-001
+  system: bjorn
+  message: "Data available in Bjorn"
+  status: ok
+  clarity_lims_id: CLAR-TEST-001
+  sequencing_run_id: RUN-TEST-2026-001
+  assay: WGS
+
+- sample_id: TEST-SAMPLE-001
+  system: pipeline
+  message: "Pipeline started"
+  status: started
+  assay: WGS
+  group_id: BATCH-TEST-001
+
+- sample_id: TEST-SAMPLE-001
+  system: pipeline
+  message: "Pipeline completed"
+  status: completed
+  assay: WGS
+  group_id: BATCH-TEST-001
+
+- sample_id: TEST-SAMPLE-001
+  system: cdm
+  message: "CDM complete"
+  status: ok
+
+- sample_id: TEST-SAMPLE-001
+  system: frontend
+  message: "Loaded into Scout"
+  status: ok
+  checkpoint: scout

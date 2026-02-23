@@ -1,0 +1,11 @@
+- sample_id: TEST-SAMPLE-001
+  system: demux
+  message: "Demultiplexing started"
+  status: started
+  sequencing_run_id: RUN-TEST-2026-001
+
+- sample_id: TEST-SAMPLE-001
+  system: demux
+  message: "Demultiplexing complete"
+  status: completed
+  sequencing_run_id: RUN-TEST-2026-001

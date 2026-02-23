@@ -1,0 +1,25 @@
+- sample_id: TEST-SAMPLE-001
+  system: clarity
+  message: "Registered in Clarity"
+  status: started
+  checkpoint: registered
+  clarity_lims_id: CLAR-TEST-001
+  lab_id: LAB-001
+  assay: WGS
+  group_id: BATCH-TEST-001
+  sample_type: blood
+
+- sample_id: TEST-SAMPLE-001
+  system: clarity
+  message: "Lab processing started"
+  status: running
+  checkpoint: lab_processing
+  clarity_lims_id: CLAR-TEST-001
+
+- sample_id: TEST-SAMPLE-001
+  system: clarity
+  message: "Sent to sequencing"
+  status: ok
+  checkpoint: sent_to_sequencing
+  clarity_lims_id: CLAR-TEST-001
+  sequencing_run_id: RUN-TEST-2026-001

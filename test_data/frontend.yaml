@@ -1,0 +1,17 @@
+- sample_id: TEST-SAMPLE-001
+  system: frontend
+  message: "Loaded into Scout"
+  status: ok
+  checkpoint: scout
+
+- sample_id: TEST-SAMPLE-001
+  system: frontend
+  message: "Loaded into Coyote"
+  status: ok
+  checkpoint: coyote
+
+- sample_id: TEST-SAMPLE-001
+  system: frontend
+  message: "Loaded into Bonsai"
+  status: ok
+  checkpoint: bonsai

@@ -1,0 +1,7 @@
+- sample_id: TEST-SAMPLE-001
+  system: bjorn
+  message: "Data available in Bjorn"
+  status: ok
+  clarity_lims_id: CLAR-TEST-001
+  sequencing_run_id: RUN-TEST-2026-001
+  assay: WGS

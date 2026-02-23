@@ -4,7 +4,7 @@ import json
 import sys
 
 import samplenator_cli.config as default_config
-from samplenator_cli.ingest import parse_file, resolve_aliases, validate_record, build_payload
+from samplenator_cli.ingest import parse_file, resolve_aliases, validate_record, build_mongo_update
 
 
 def load_config(config_path):
@@ -51,7 +51,7 @@ def upload(input_file, mongo_uri, mongo_db, mongo_collection, dry_run, config_pa
 
     all_errors = []
     for i, record in enumerate(rows, start=1):
-        for err in validate_record(record, cfg.REQUIRED_FIELDS, cfg.VALID_STATUSES):
+        for err in validate_record(record, cfg.REQUIRED_FIELDS, cfg.VALID_STATUSES, cfg.KNOWN_SYSTEMS):
             all_errors.append(f"Row {i}: {err}")
 
     if all_errors:
@@ -59,17 +59,42 @@ def upload(input_file, mongo_uri, mongo_db, mongo_collection, dry_run, config_pa
             click.echo(msg, err=True)
         sys.exit(1)
 
-    payload_records = build_payload(rows, cfg.KNOWN_FIELDS)
+    # Normalise records: strip whitespace, lowercase status/system, drop unknown fields
+    payload_records = []
+    for record in rows:
+        row = {}
+        for field in cfg.KNOWN_FIELDS:
+            if field in record and record[field] is not None and str(record[field]).strip() != "":
+                row[field] = str(record[field]).strip()
+        if "status" in row:
+            row["status"] = row["status"].lower()
+        if "system" in row:
+            row["system"] = row["system"].lower()
+        payload_records.append(row)
 
     if dry_run:
-        click.echo(json.dumps({"records": payload_records}, indent=2))
+        updates = [build_mongo_update(r, cfg) for r in payload_records]
+        click.echo(json.dumps({"updates": updates}, indent=2))
         sys.exit(0)
 
     from pymongo import MongoClient
     client = MongoClient(mongo_uri)
     collection = client[mongo_db][mongo_collection]
-    result = collection.insert_many(payload_records)
-    click.echo(f"Inserted {len(result.inserted_ids)} record(s) into {mongo_db}.{mongo_collection}")
+
+    upserted = inserted = 0
+    for record in payload_records:
+        update = build_mongo_update(record, cfg)
+        result = collection.update_one(
+            {"sample_id": record["sample_id"]},
+            update,
+            upsert=True,
+        )
+        if result.upserted_id:
+            upserted += 1
+        else:
+            inserted += 1  # actually "updated"
+
+    click.echo(f"Done — {upserted} created, {inserted} updated in {mongo_db}.{mongo_collection}")
 
 
 if __name__ == "__main__":
