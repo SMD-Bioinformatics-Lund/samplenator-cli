@@ -1,5 +1,6 @@
 import csv
 from datetime import datetime
+from urllib.parse import urlparse
 
 import yaml
 
@@ -106,7 +107,12 @@ def build_mongo_update(record: dict, cfg) -> dict:
     mask = url_masks.get(system)
     if isinstance(mask, dict):
         mask = mask.get(record.get("checkpoint", "default"))
-    resolved_url = mask.format(sample_id=record["sample_id"]) if mask else None
+    try:
+        resolved_url = mask.format(**record) if mask else None
+    except KeyError:
+        parsed = urlparse(mask)
+        checkpoint = record.get("checkpoint", "")
+        resolved_url = f"{parsed.scheme}://{parsed.netloc}/{checkpoint}"
 
     # System-specific fields
     if system in cfg.CHECKPOINT_SYSTEMS:

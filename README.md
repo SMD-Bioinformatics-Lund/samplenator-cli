@@ -139,6 +139,15 @@ Provide `--config path/to/config.py` to use your own mappings. Use `samplenator_
 
 These are the lab systems that push sample status updates into theSamplenator. The `system` field in every ingest record must identify which system is reporting (lowercase).
 
+Workflow order:
+
+```
+clarity → demux → bjorn → pipeline ─┬→ cdm       (QC frontend)
+                                     └→ frontend  (Scout, Coyote, Bonsai, etc.)
+```
+
+CDM and frontend are parallel endpoints — a sample will typically push to both after the pipeline completes.
+
 ### clarity
 
 **Role:** Sample registration and LIMS tracking (Clarity LIMSv6).
@@ -147,8 +156,6 @@ Pushes status when:
 - A sample is registered in Clarity
 - Lab processing has started
 - The sample has been sent to sequencing
-
-> Only sequencing samples are ingested. ddPCR and similar assay types are excluded.
 
 Uses **checkpoints** — supply `checkpoint` (e.g. `registered`, `lab_processing`, `sent_to_sequencing`) for granular tracking. Defaults to `default` if omitted.
 
@@ -182,13 +189,11 @@ Pushes status when data is available in Bjorn.
 
 ### pipeline
 
-**Role:** Bioinformatics analysis pipeline (Nextflow / Snakemake).
+**Role:** Bioinformatics analysis pipeline (Nextflow).
 
 Pushes status when:
 - The pipeline has started for the sample
 - The pipeline has finished
-
-> Time-in-queue is calculated by the UI from timestamps — it is not pushed.
 
 **Typical messages:** `"Pipeline started"`, `"Pipeline completed"`
 
@@ -196,11 +201,11 @@ Pushes status when:
 
 ### cdm
 
-**Role:** CDM processing step.
+**Role:** QC frontend. Runs in parallel with `frontend` — both receive samples after the pipeline completes.
 
-Pushes status when CDM processing is done for the sample.
+Pushes status when the sample has been uploaded to CDM.
 
-**Typical messages:** `"CDM complete"`
+**Typical messages:** `"Uploaded to CDM"`
 
 ---
 
@@ -210,11 +215,11 @@ Pushes status when CDM processing is done for the sample.
 
 Pushes status when a sample is loaded into an analysis interface.
 
-Uses **checkpoints** — supply `checkpoint` with the interface name (e.g. `scout`, `coyote`, `bonsai`, `breaxpress`). Defaults to `default` if omitted.
+Uses **checkpoints** — supply `checkpoint` with the interface name (e.g. `scout`, `coyote`, `bonsai`, `breaxpress`, `eyrie`, `cll_genie`, `gens`). Defaults to `default` if omitted.
 
-Analysis interfaces: **Scout**, **Coyote**, **Bonsai**, or **Breaxpress** — depending on assay.
+Analysis interfaces: **Scout**, **Coyote**, **Bonsai**, **Breaxpress**, **Eyrie**, **CLL Genie**, or **Gens** — depending on assay.
 
-**Typical messages:** `"Loaded into Scout"`, `"Loaded into Coyote"`
+**Typical messages:** `"Loaded into Scout"`, `"Loaded into Coyote"`, `"Loaded into Gens"`
 
 ---
 

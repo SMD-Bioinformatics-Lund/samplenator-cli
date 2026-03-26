@@ -6,7 +6,8 @@
 # ingest record should be one of these names (or a recognised alias below).
 #
 # Workflow order mirrors the lab processing pipeline:
-#   clarity  →  demux  →  bjorn  →  pipeline  →  cdm  →  frontend
+#   clarity  →  demux  →  bjorn  →  pipeline ─┬→ cdm       (QC frontend)
+#                                             └→ frontend  (Scout, Coyote, Bonsai, etc.)
 # ---------------------------------------------------------------------------
 
 KNOWN_SYSTEMS = [
@@ -29,14 +30,15 @@ KNOWN_SYSTEMS = [
     "bjorn",
 
     # ---- pipeline -----------------------------------------------------------
-    # Bioinformatics analysis pipeline (Nextflow / Snakemake).
+    # Bioinformatics analysis pipeline (Nextflow).
     # Pushes when the pipeline starts and when it finishes.
     # Time-in-queue is calculated by the UI — not pushed.
     "pipeline",
 
     # ---- cdm ----------------------------------------------------------------
-    # CDM processing step.
-    # Pushes when CDM processing is done for the sample.
+    # CDM — QC frontend.
+    # Parallel endpoint alongside frontend (both receive samples after pipeline).
+    # Pushes when the sample has been uploaded to CDM.
     "cdm",
 
     # ---- frontend -----------------------------------------------------------
@@ -65,7 +67,7 @@ FIELD_ALIASES = {
     "sequencing_run_id":  ["run_id", "seq_run", "sequencing_run", "runid"],
     "assay":              ["assay_type", "test", "panel"],
     "group_id":           ["group", "batch", "batch_id", "batchid"],
-    "lab_id":             [],
+    "lab_id":             ["sample_name"],
     "sample_type":        ["type"],
     "checkpoint":         ["step", "phase"],
 }
@@ -78,6 +80,8 @@ KNOWN_FIELDS = {
     "sample_id", "system", "message", "status",
     "clarity_lims_id", "sequencing_run_id", "assay", "group_id",
     "lab_id", "sample_type", "checkpoint",
+    "owner",    # scout URL: {owner}/{sample_id}
+    "case_id",  # gens URL: gens_const/viewer/{case_id}
 }
 REQUIRED_FIELDS = {"sample_id", "system", "message", "status"}
 VALID_STATUSES  = {"started", "running", "ok", "completed", "fail", "failed"}
@@ -90,18 +94,19 @@ VALID_STATUSES  = {"started", "running", "ok", "completed", "fail", "failed"}
 
 SYSTEM_URL_MASKS = {
     # Non-checkpoint systems
-    "bjorn":    "https://bjorn.example.com/samples/{sample_id}",
-    "pipeline": "https://pipeline.example.com/runs/{sample_id}",
-    "cdm":      "https://cdm.example.com/samples/{sample_id}",
+    "bjorn": "https://mtlucmds1.lund.skane.se/bjorn/sample/{assay}/{sample_id}",
+    "cdm":   "https://mtlucmds1.lund.skane.se/cdm/",
 
     # frontend checkpoints
     "frontend": {
-        "scout":      "https://scout.example.com/cases/{sample_id}",
-        "coyote":     "https://coyote.example.com/samples/{sample_id}",
-        "bonsai":     "https://bonsai.example.com/sample/{sample_id}",
-        "breaxpress": "https://breaxpress.example.com/sample/{sample_id}",
-        "clarity":    "https://clarity.example.com/samples/{sample_id}",
-        "eyrie":      "https://eyrie.example.com/samples/{sample_id}",
+        "scout":      "https://mtcmdpgm01.lund.skane.se/{owner}/{sample_id}",
+        "coyote":     "https://mtlucmds1.lund.skane.se/coyote3/dna/sample/{sample_id}",
+        "bonsai":     "https://mtlucmds1.lund.skane.se/bonsai/sample/{sample_id}",
+        "breaxpress": "https://mtlucmds1.lund.skane.se/breexpress/sample/{sample_id}",
+        "clarity":    "https://claritylims.lund.skane.se/clarity/sample/{sample_id}",
+        "eyrie":      "https://mtlucmds1.lund.skane.se/eyrie/sample/{sample_id}",
+        "cll_genie":  "https://mtlucmds1.lund.skane.se/cll_genie/sample/{sample_id}",
+        "gens":       "https://mtcmdpgm01.lund.skane.se/gens_const/viewer/{case_id}?sample_ids={sample_id}&genome_build=38",
     },
 }
 
