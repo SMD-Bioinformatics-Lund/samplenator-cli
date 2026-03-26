@@ -1,9 +1,0 @@
-- sample_id: TEST-SAMPLE-001
-  system: cdm
-  message: "CDM processing started"
-  status: started
-
-- sample_id: TEST-SAMPLE-001
-  system: cdm
-  message: "CDM complete"
-  status: ok

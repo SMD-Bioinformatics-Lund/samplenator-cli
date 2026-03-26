@@ -1,0 +1,2 @@
+sample_id,system,message,status,clarity_lims_id,sequencing_run_id,assay
+TEST-SAMPLE-001,bjorn,Data available in Bjorn,ok,CLAR-TEST-001,RUN-TEST-2026-001,WGS

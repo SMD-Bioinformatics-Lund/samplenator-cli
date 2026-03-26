@@ -1,0 +1,4 @@
+sample_id,system,message,status,checkpoint,clarity_lims_id,sequencing_run_id,lab_id,assay,group_id,sample_type
+TEST-SAMPLE-001,clarity,Registered in Clarity,started,registered,CLAR-TEST-001,,LAB-001,WGS,BATCH-TEST-001,blood
+TEST-SAMPLE-001,clarity,Lab processing started,running,lab_processing,CLAR-TEST-001,,,,,
+TEST-SAMPLE-001,clarity,Sent to sequencing,ok,sent_to_sequencing,CLAR-TEST-001,RUN-TEST-2026-001,,,,

@@ -1,0 +1,3 @@
+sample_id,system,message,status,sequencing_run_id
+TEST-SAMPLE-001,demux,Demultiplexing started,started,RUN-TEST-2026-001
+TEST-SAMPLE-001,demux,Demultiplexing complete,completed,RUN-TEST-2026-001

@@ -1,0 +1,4 @@
+sample_id,system,message,status,assay,group_id
+TEST-SAMPLE-001,pipeline,Pipeline started,started,WGS,BATCH-TEST-001
+TEST-SAMPLE-001,pipeline,Pipeline completed,completed,WGS,BATCH-TEST-001
+TEST-SAMPLE-001,pipeline,Pipeline failed,failed,WGS,BATCH-TEST-001
